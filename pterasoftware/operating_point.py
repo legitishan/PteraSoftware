@@ -36,6 +36,9 @@ class OperatingPoint:
         freestream velocity vector (in the direction the wind is going to) in
         geometry axes.
 
+        is_symmetric: This method returns True if the operating point results in flow
+        symmetrical about XZ plane. It returns False if not.
+
     This class contains the following class attributes:
         None
 
@@ -51,8 +54,7 @@ class OperatingPoint:
             The default value is 1.225.
         :param velocity: float, optional
             This parameter is the freestream speed in the positive x direction. The
-            units are meters per second. The
-            default value is 10.0.
+            units are meters per second. The default value is 10.0.
         :param alpha: float, optional
             This parameter is the angle of attack. The units are degrees. The default
             value is 5.0.
@@ -60,12 +62,14 @@ class OperatingPoint:
             This parameter is the sideslip angle. The units are degrees. The default
             value is 0.0.
         """
-
         # Initialize the attributes.
         self.density = density
         self.velocity = velocity
         self.alpha = alpha
         self.beta = beta
+
+        # Determine if this operating point support symmetry about the XZ plane.
+        self.symmetric = self.is_symmetric()
 
     def calculate_dynamic_pressure(self):
         """This method calculates the freestream dynamic pressure of the working fluid.
@@ -73,7 +77,6 @@ class OperatingPoint:
         :return dynamic_pressure: float
             This is the freestream dynamic pressure. Its units are pascals.
         """
-
         # Calculate and return the freestream dynamic pressure
         dynamic_pressure = 0.5 * self.density * self.velocity ** 2
         return dynamic_pressure
@@ -85,7 +88,6 @@ class OperatingPoint:
         :return rotation_matrix_wind_axes_to_geometry_axes: 3 x 3 array
             This is the rotation matrix to convert wind axes to geometry axes.
         """
-
         sin_alpha = np.sin(np.radians(self.alpha))
         cos_alpha = np.cos(np.radians(self.alpha))
         sin_beta = np.sin(np.radians(self.beta))
@@ -100,8 +102,8 @@ class OperatingPoint:
         )
 
         # Flip the axes because in geometry axes x is downstream by convention,
-        # while in wind axes x is upstream by
-        # convention. Same with z being up/down respectively.
+        # while in wind axes x is upstream by convention. Same with z being up/down
+        # respectively.
         axes_flip = np.array(
             [
                 [-1, 0, 0],
@@ -148,3 +150,13 @@ class OperatingPoint:
             self.calculate_freestream_direction_geometry_axes() * self.velocity
         )
         return freestream_velocity_geometry_axes
+
+    def is_symmetric(self):
+        """This method returns True if the operating point results in flow
+        symmetrical about XZ plane. It returns False if not.
+
+        :return: Bool
+            This is True if the operating point results in flow symmetrical about XZ
+            plane and False otherwise.
+        """
+        return self.beta == 0

@@ -49,6 +49,9 @@ class Movement:
         get_max_period: This method returns the longest period of any of this
         movement object's sub-movement objects, sub-sub-movement objects, etc.
 
+        is_symmetric: This method returns True if this movement's geometry, flow,
+        and movement are entirely symmetric about the XZ plane and False otherwise.
+
     This class contains the following class attributes:
         None
 
@@ -138,6 +141,9 @@ class Movement:
             num_steps=self.num_steps, delta_time=self.delta_time
         )
 
+        # Determine if all of this object's movement is symmetric about the XZ plane.
+        self.symmetric = self.is_symmetric()
+
     def get_max_period(self):
         """This method returns the longest period of any of this movement object's sub-
         movement objects, sub-sub-movement objects, etc.
@@ -152,6 +158,35 @@ class Movement:
         )
 
         return max_period
+
+    def is_symmetric(self):
+        """This method returns True if this movement's geometry, flow, and movement
+        are entirely symmetric about the XZ plane and False otherwise.
+
+        Note: If the operating point movement is modified to allow for changes in
+        beta, modify this function to return False for beta amplitude's that are not
+        zero.
+
+        :return: Bool
+            This is True if this movement's geometry, flow, and movement are entirely
+            symmetric about the XZ plane and False otherwise.
+        """
+        # Check if the airplane's geometry and movement are entirely symmetric. If
+        # not, return False.
+        if not self.airplane_movement.base_airplane.symmetric:
+            return False
+        if self.airplane_movement.y_ref_amplitude != 0:
+            return False
+        for wing_movement in self.airplane_movement.wing_movements:
+            if wing_movement.y_le_amplitude != 0:
+                return False
+
+        # Check if the operating point's flow is entirely symmetric. If not, return
+        # False.
+        if not self.operating_point_movement.base_operating_point.symmetric:
+            return False
+
+        return True
 
 
 class AirplaneMovement:
@@ -195,40 +230,34 @@ class AirplaneMovement:
             base airplane's wings.
         :param x_ref_amplitude: float, optional
             This is the amplitude of the airplane's change in its x reference point.
-            Its units are meters and its
-            default value is 0 meters.
+            Its units are meters and its default value is 0.0 meters.
         :param x_ref_period: float, optional
             This is the period of the airplane's change in its x reference point. Its
-            units are seconds and its
-            default value is 0 seconds.
+            units are seconds and its default value is 0.0 seconds.
         :param x_ref_spacing: string, optional
             This value determines the spacing of the airplane's change in its x
-            reference point. The options are "sine",
-            and "uniform". The default value is "sine".
+            reference point. The options are "sine", and "uniform". The default value
+            is "sine".
         :param y_ref_amplitude: float, optional
             This is the amplitude of the airplane's change in its y reference point.
-            Its units are meters and its
-            default value is 0 meters.
+            Its units are meters and its default value is 0.0 meters.
         :param y_ref_period: float, optional
             This is the period of the airplane's change in its y reference point. Its
-            units are seconds and its
-            default value is 0 seconds.
+            units are seconds and its default value is 0.0 seconds.
         :param y_ref_spacing: string, optional
             This value determines the spacing of the airplane's change in its y
-            reference point. The options are "sine",
-            and "uniform". The default value is "sine".
+            reference point. The options are "sine", and "uniform". The default value
+            is "sine".
         :param z_ref_amplitude: float, optional
             This is the amplitude of the airplane's change in its z reference point.
-            Its units are meters and its
-            default value is 0 meters.
+            Its units are meters and its default value is 0.0 meters.
         :param z_ref_period: float, optional
             This is the period of the airplane's change in its z reference point. Its
-            units are seconds and its
-            default value is 0 seconds.
+            units are seconds and its default value is 0.0 seconds.
         :param z_ref_spacing: string, optional
             This value determines the spacing of the airplane's change in its z
-            reference point. The options are "sine",
-            and "uniform". The default value is "sine".
+            reference point. The options are "sine", and "uniform". The default value
+            is "sine".
         """
 
         # Initialize the class attributes.
@@ -442,44 +471,34 @@ class WingMovement:
             This is the first wing object, from which the others will be created.
         :param wing_cross_sections_movements: list of WingCrossSectionMovement objects
             This is a list of the WingCrossSectionMovement objects associated with
-            each of the base wing's cross
-            sections.
+            each of the base wing's cross sections.
         :param x_le_amplitude: float, optional
             This is the amplitude of the wing's change in its x reference point. Its
-            units are meters and its
-            default value is 0 meters.
+            units are meters and its default value is 0.0 meters.
         :param x_le_period: float, optional
             This is the period of the wing's change in its x reference point. Its
-            units are seconds and its
-            default value is 0 seconds.
+            units are seconds and its default value is 0.0 seconds.
         :param x_le_spacing: string, optional
             This value determines the spacing of the wing's change in its x reference
-            point. The options are "sine",
-            and "uniform". The default value is "sine".
+            point. The options are "sine", and "uniform". The default value is "sine".
         :param y_le_amplitude: float, optional
             This is the amplitude of the wing's change in its y reference point. Its
-            units are meters and its
-            default value is 0 meters.
+            units are meters and its default value is 0.0 meters.
         :param y_le_period: float, optional
             This is the period of the wing's change in its y reference point. Its
-            units are seconds and its
-            default value is 0 seconds.
+            units are seconds and its default value is 0.0 seconds.
         :param y_le_spacing: string, optional
             This value determines the spacing of the wing's change in its y reference
-            point. The options are "sine",
-            and "uniform". The default value is "sine".
+            point. The options are "sine", and "uniform". The default value is "sine".
         :param z_le_amplitude: float, optional
             This is the amplitude of the wing's change in its z reference point. Its
-            units are meters and its
-            default value is 0 meters.
+            units are meters and its default value is 0.0 meters.
         :param z_le_period: float, optional
             This is the period of the wing's change in its z reference point. Its
-            units are seconds and its
-            default value is 0 seconds.
+            units are seconds and its default value is 0.0 seconds.
         :param z_le_spacing: string, optional
             This value determines the spacing of the wing's change in its z reference
-            point. The options are "sine",
-            and "uniform". The default value is "sine".
+            point. The options are "sine", and "uniform". The default value is "sine".
         """
 
         # Initialize the class attributes.
@@ -591,8 +610,7 @@ class WingMovement:
             raise Exception("Bad value of z_le_spacing!")
 
         # Create an empty array that will hold each of the wing's wing cross
-        # section's vector of other wing cross
-        # section's based its movement.
+        # section's vector of other wing cross section's based its movement.
         wing_cross_sections = np.empty(
             (len(self.wing_cross_section_movements), num_steps), dtype=object
         )
@@ -613,7 +631,7 @@ class WingMovement:
 
             wing_is_vertical = False
 
-            # Check if this is this wing's root cross section.
+            # Check if this is this wing's first cross section.
             if wing_cross_section_movement_location == 0:
 
                 # Get the root cross section's sweeping and heaving attributes.
@@ -637,8 +655,8 @@ class WingMovement:
                 assert first_wing_cross_section_movement_heaving_period == 0
 
                 # Set the variables relating this wing cross section to the inner
-                # wing cross section to zero because
-                # this is the innermost wing cross section
+                # wing cross section to zero because this is the innermost wing cross
+                # section
                 wing_cross_section_span = 0.0
                 base_wing_cross_section_sweep = 0.0
                 base_wing_cross_section_heave = 0.0
@@ -838,85 +856,70 @@ class WingCrossSectionMovement:
             be created.
         :param sweeping_amplitude: float, optional
             This is the amplitude of the cross section's change in its sweep,
-            relative to the vehicle's body axes. Its
-            units are degrees and its default value is 0.0 degrees.
+            relative to the vehicle's body axes. Its units are degrees and its
+            default value is 0.0 degrees.
         :param sweeping_period: float, optional
             This is the period of the cross section's change in its sweep. Its units
-            are seconds and its default value
-            is 0.0 seconds.
+            are seconds and its default value is 0.0 seconds.
         :param sweeping_spacing: string, optional
             This value determines the spacing of the cross section's change in its
-            sweep. The options are "sine",
-            "uniform", and "custom". The default value is "sine". If "custom",
-            then the value of custom_sweep_function
-            must not be none. If both sweeping_spacing and custom_sweep_function are
-            not none, then the value of
-            sweeping_spacing will take precedence.
+            sweep. The options are "sine", "uniform", and "custom". The default value
+            is "sine". If "custom", then the value of custom_sweep_function must not
+            be none. If both sweeping_spacing and custom_sweep_function are not none,
+            then the value of sweeping_spacing will take precedence.
         :param custom_sweep_function: function, optional
             This is a function that describes the motion of the sweeping. For
-            example, it could be np.cos or np.sinh
-            (assuming numpy had previously been imported as np). It will be
-            horizontally scaled by the sweeping_period,
-            vertically scaled by the the sweeping_amplitude. For example, say the
-            function has an amplitude of 2 units,
-            a period of 3 units, sweeping_amplitude is set to 4 units and
-            sweeping_period is set to 5 units. The
-            sweeping motion will have a net amplitude of 8 units and a net period of
-            15 units.
+            example, it could be np.cos or np.sinh (assuming numpy had previously
+            been imported as np). It will be horizontally scaled by the
+            sweeping_period, vertically scaled by the the sweeping_amplitude. For
+            example, say the function has an amplitude of 2 units, a period of 3
+            units, sweeping_amplitude is set to 4 units and sweeping_period is set to
+            5 units. The sweeping motion will have a net amplitude of 8 units and a
+            net period of 15 units.
         :param pitching_amplitude: float, optional
             This is the amplitude of the cross section's change in its pitch,
-            relative to the vehicle's body axes. Its
-            units are degrees and its default value is 0.0 degrees.
+            relative to the vehicle's body axes. Its units are degrees and its
+            default value is 0.0 degrees.
         :param pitching_period: float, optional
             This is the period of the cross section's change in its pitch. Its units
-            are seconds and its default value
-            is 0.0 seconds.
+            are seconds and its default value is 0.0 seconds.
         :param pitching_spacing: string, optional
             This value determines the spacing of the cross section's change in its
-            pitch. The options are "sine",
-            "uniform", and "custom". The default value is "sine". If "custom",
-            then the value of custom_pitch_function
-            must not be none. If both pitching_spacing and custom_pitch_function are
-            not none, then the value of
-            pitching_spacing will take precedence.
+            pitch. The options are "sine", "uniform", and "custom". The default value
+            is "sine". If "custom", then the value of custom_pitch_function must not
+            be none. If both pitching_spacing and custom_pitch_function are not none,
+            then the value of pitching_spacing will take precedence.
         :param custom_pitch_function: function, optional
             This is a function that describes the motion of the pitching. For
-            example, it could be np.cos or np.sinh
-            (assuming numpy had previously been imported as np). It will be
-            horizontally scaled by the pitching_period,
-            vertically scaled by the the pitching_amplitude. For example, say the
-            function has an amplitude of 2 units,
-            a period of 3 units, pitching_amplitude is set to 4 units and
-            pitching_period is set to 5 units. The
-            pitching motion will have a net amplitude of 8 units and a net period of
-            15 units.
+            example, it could be np.cos or np.sinh (assuming numpy had previously
+            been imported as np). It will be horizontally scaled by the
+            pitching_period, vertically scaled by the the pitching_amplitude. For
+            example, say the function has an amplitude of 2 units, a period of 3
+            units, pitching_amplitude is set to 4 units and pitching_period is set to
+            5 units. The pitching motion will have a net amplitude of 8 units and a
+            net period of 15 units.
         :param heaving_amplitude: float, optional
             This is the amplitude of the cross section's change in its heave,
-            relative to the vehicle's body axes. Its
-            units are degrees and its default value is 0.0 degrees.
+            relative to the vehicle's body axes. Its units are degrees and its
+            default value is 0.0 degrees.
         :param heaving_period: float, optional
             This is the period of the cross section's change in its heave. Its units
-            are seconds and its default value
-            is 0.0 seconds.
+            are seconds and its default value is 0.0 seconds.
         :param heaving_spacing: string, optional
             This value determines the spacing of the cross section's change in its
-            heave. The options are "sine",
-            "uniform", and "custom". The default value is "sine". If "custom",
-            then the value of custom_heave_function
-            must not be none. If both heaving_spacing and custom_heave_function are
-            not none, then the value of
-            heaving_spacing will take precedence.
+            heave. The options are "sine", "uniform", and "custom". The default value
+            is "sine". If "custom", then the value of custom_heave_function must not
+            be none. If both heaving_spacing and custom_heave_function are not none,
+            then the value of heaving_spacing will take precedence.
         :param custom_heave_function: function, optional
             This is a function that describes the motion of the heaving. For example,
-            it could be np.cos or np.sinh
-            (assuming numpy had previously been imported as np). It will be
-            horizontally scaled by the heaving_period,
+            it could be np.cos or np.sinh (assuming numpy had previously been
+            imported as np). It will be horizontally scaled by the heaving_period,
             vertically scaled by the the heaving_amplitude. For example, say the
-            function has an amplitude of 2 units,
-            a period of 3 units, heaving_amplitude is set to 4 units and
-            heaving_period is set to 5 units. The
-            heaving motion will have a net amplitude of 8 units and a net period of
-            15 units.
+            function has an amplitude of 2 units, a period of 3 units,
+            heaving_amplitude is set to 4 units and heaving_period is set to 5 units.
+            The heaving motion will have a net amplitude of 8 units and a net period
+            of 15 units.
         """
 
         # Initialize the class attributes.

@@ -41,6 +41,9 @@ class SteadyProblem:
         self.airplane = airplane
         self.operating_point = operating_point
 
+        # Determine if every part of this problem is symmetric about the XZ plane.
+        self.symmetric = self.airplane.symmetric and self.operating_point.symmetric
+
 
 class UnsteadyProblem:
     """This is a class for unsteady aerodynamics problems.
@@ -68,12 +71,13 @@ class UnsteadyProblem:
         """
 
         # Initialize the class attributes.
-        self.num_steps = movement.num_steps
-        self.delta_time = movement.delta_time
+        self.movement = movement
+        self.num_steps = self.movement.num_steps
+        self.delta_time = self.movement.delta_time
         self.only_final_results = only_final_results
 
-        # If the user only wants the results for the final cycle, find the first
-        # time step index where the solver should start calculating results. Otherwise,
+        # If the user only wants the results for the final cycle, find the first time
+        # step index where the solver should start calculating results. Otherwise,
         # set the first time step index to 0.
         if self.only_final_results:
             self.max_period = movement.get_max_period()
@@ -98,8 +102,8 @@ class UnsteadyProblem:
         # Iterate through the problem's time steps.
         for step in range(self.num_steps):
             # Get the airplane and operating point object at this time step.
-            this_airplane = movement.airplanes[step]
-            this_operating_point = movement.operating_points[step]
+            this_airplane = self.movement.airplanes[step]
+            this_operating_point = self.movement.operating_points[step]
 
             # Initialize the steady problem object at this time step.
             this_steady_problem = SteadyProblem(
@@ -108,3 +112,6 @@ class UnsteadyProblem:
 
             # Append this steady problem to the list of steady problems.
             self.steady_problems.append(this_steady_problem)
+
+        # Determine if every part of this problem is symmetric about the XZ plane.
+        self.symmetric = self.movement.symmetric

@@ -56,6 +56,9 @@ class Airplane:
         set_reference_dimensions_from_wing: This method sets the reference dimensions
         of the current_airplane from measurements obtained from the main wing.
 
+        is_symmetric: This method determines if the entire airplane is symmetric
+        about the XZ plane.
+
     This class contains the following class attributes:
         None
 
@@ -80,20 +83,16 @@ class Airplane:
             A sensible name for your current_airplane. The default is "Untitled".
         :param x_ref: float, optional
             This is the x coordinate of the moment reference point. It should be the
-            x coordinate of the center of
-            gravity. The default is 0.0.
+            x coordinate of the center of gravity. The default is 0.0.
         :param y_ref: float, optional
             This is the y coordinate of the moment reference point. It should be the
-            y coordinate of the center of
-            gravity. The default is 0.0.
+            y coordinate of the center of gravity. The default is 0.0.
         :param z_ref: float, optional
             This is the z coordinate of the moment reference point. It should be the
-            z coordinate of the center of
-            gravity. The default is 0.0.
+            z coordinate of the center of gravity. The default is 0.0.
         :param wings: list of Wing objects, optional
             This is a list of the current_airplane's wings defined as Wing objects.
-            The default is None, which this
-            method converts to an empty list.
+            The default is None, which this method converts to an empty list.
         :param s_ref: float, optional if more than one wing is in the wings list.
             This is the reference wetted area. If not set, it populates from first
             wing object.
@@ -120,8 +119,7 @@ class Airplane:
         self.wings = wings
 
         # If the the wing list is not empty, set the wing reference dimensions to be
-        # the main wing's reference
-        # dimensions.
+        # the main wing's reference dimensions.
         if len(self.wings) > 0:
             self.set_reference_dimensions_from_main_wing()
 
@@ -140,17 +138,18 @@ class Airplane:
             self.num_panels += wing.num_panels
 
         # Initialize empty class attributes to hold the force, moment,
-        # force coefficients, and moment coefficients this
-        # airplane experiences after
+        # force coefficients, and moment coefficients this airplane experiences.
         self.total_near_field_force_wind_axes = None
         self.total_near_field_force_coefficients_wind_axes = None
         self.total_near_field_moment_wind_axes = None
         self.total_near_field_moment_coefficients_wind_axes = None
 
+        # Determine if the entire problem is symmetric about the XZ plane.
+        self.symmetric = self.is_symmetric()
+
     def set_reference_dimensions_from_main_wing(self):
         """This method sets the reference dimensions of the current_airplane from
-        measurements obtained from the main
-        wing.
+        measurements obtained from the main wing.
 
         This method assumes the main wing to be the first wing in the wings list
         passed by the user.
@@ -162,19 +161,50 @@ class Airplane:
         main_wing = self.wings[0]
 
         # Set the objects reference dimension attributes to be the reference
-        # dimension attributes of the main wing.
-        # These attributes are calculated via methods in the Wing class.
+        # dimension attributes of the main wing. These attributes are calculated via
+        # methods in the Wing class.
         self.s_ref = float(main_wing.wetted_area)
         self.b_ref = float(main_wing.span)
         self.c_ref = float(main_wing.wetted_area / main_wing.span)
+
+    def is_symmetric(self):
+        """This method determines if the entire airplane is symmetric about the XZ
+        plane.
+
+        :return: Bool
+            This is True if all the geometry is symmetric about the XZ plane and
+            False otherwise.
+        """
+        # Return false if the y reference coordinate is not 0.
+        if self.y_ref != 0:
+            return False
+
+        # Iterate through all the wings.
+        for wing in self.wings:
+
+            # Return false if this wing is not declared to be symmetric.
+            if not wing.symmetric:
+                return False
+
+            # Return False if any of this wing's wing cross sections have a deflected,
+            # asymmetric control surface.
+            for wing_cross_section in wing.wing_cross_sections:
+                if wing_cross_section.control_surface_type != "symmetric":
+                    if wing_cross_section.control_surface_deflection != 0:
+                        return False
+
+        return True
 
 
 class Wing:
     """This is a class used to contain the wings of an current_airplane.
 
-    If the wing is symmetric across the XZ plane, just define the right half and
-    supply "symmetric=True" in the constructor. If the wing is not symmetric across
-    the XZ plane, just define the wing.
+    Note: If the wing is symmetric across the XZ plane, just define the right half
+    and supply "symmetric=True" in the constructor. If the wing is not symmetric
+    across the XZ plane, define all the wing's wing cross sections.
+
+    Note: The order of the wing cross section list doesn't matter, as long as the
+    connected wing cross sections are adjacent in the list.
 
     Citation:
         Adapted from:         geometry.Wing in AeroSandbox
@@ -211,29 +241,27 @@ class Wing:
             This is a sensible name for the wing. The default is "Untitled Wing".
         :param x_le: float, optional
             This is the x coordinate of the leading edge of the wing, relative to the
-            current_airplane's reference
-            point. The default is 0.0.
+            current_airplane's reference point. The default is 0.0.
         :param y_le: float, optional
             This is the y coordinate of the leading edge of the wing, relative to the
-            current_airplane's reference
-            point. The default is 0.0.
+            current_airplane's reference point. The default is 0.0.
         :param z_le: float, optional
             This is the z coordinate of the leading edge of the wing, relative to the
-            current_airplane's reference
-            point. The default is 0.0.
+            current_airplane's reference point. The default is 0.0.
         :param wing_cross_sections: list of WingCrossSection objects, optional
             This is a list of WingCrossSection objects, that represent the wing's
             cross sections. The default is None.
         :param symmetric: bool, optional
-            Set this to true if the wing is across the xz plane. Set it to false if
-            not. The default is false.
+            Set this to true if the wing is symmetric across the xz plane. Set it to
+            false if not. The default is false.
         :param num_chordwise_panels: int, optional
             This is the number of chordwise panels to be used on this wing. The
             default is 8.
         :param chordwise_spacing: str, optional
             This is the type of spacing between the wing's chordwise panels. It can
-            be set to "cosine" or "uniform".
-            Cosine is highly recommended. The default is cosine.
+            be set to "cosine" or "uniform". Cosine chordwise spacing is highly
+            recommended for the steady solvers. Uniform chordwise spacing should be
+            used with the unsteady solvers The default is "cosine".
         """
 
         # Initialize the name and the position of the wing's leading edge.
@@ -254,9 +282,8 @@ class Wing:
         self.chordwise_spacing = chordwise_spacing
 
         # Find the number of spanwise panels on the wing by adding each cross
-        # section's number of spanwise panels.
-        # Exclude the last cross section's number of spanwise panels as this is
-        # irrelevant. If the wing is symmetric,
+        # section's number of spanwise panels. Exclude the last cross section's
+        # number of spanwise panels as this is irrelevant. If the wing is symmetric,
         # multiple the summation by two.
         self.num_spanwise_panels = 0
         for cross_section in self.wing_cross_sections[:-1]:
@@ -372,16 +399,13 @@ class WingCrossSection:
 
         :param x_le: float, optional
             This is the x coordinate of the leading edge of the cross section
-            relative to the wing's datum. The default
-            value is 0.0.
+            relative to the wing's datum. The default value is 0.0.
         :param y_le: float, optional
             This is the y coordinate of the leading edge of the cross section
-            relative to the wing's datum. The default
-            value is 0.0.
+            relative to the wing's datum. The default value is 0.0.
         :param z_le: float, optional
             This is the z coordinate of the leading edge of the cross section
-            relative to the wing's datum. The default
-            value is 0.0.
+            relative to the wing's datum. The default value is 0.0.
         :param chord: float, optional
             This is the chord of the wing at this cross section. The default value is
             1.0.
@@ -393,25 +417,23 @@ class WingCrossSection:
             is None.
         :param control_surface_type: str, optional
             This is type of control surfaces for this cross section. It can be
-            "symmetric" or "asymmetric". An example
-            of symmetric control surfaces are flaps. An example of asymmetric control
-            surfaces are ailerons. The default
-            value is "symmetric".
+            "symmetric" or "asymmetric". An example of symmetric control surfaces are
+            flaps. An example of asymmetric control surfaces are ailerons. The
+            default value is "symmetric".
         :param control_surface_hinge_point: float, optional
             This is the The location of the control surface hinge from the leading
-            edge as a fraction of chord. The
-            default value is 0.75.
+            edge as a fraction of chord. The default value is 0.75.
         :param control_surface_deflection: float, optional
             This is the Control deflection in degrees. Deflection downwards is
-            positive. The default value is 0.0
-            degrees.
+            positive. The default value is 0.0 degrees.
         :param num_spanwise_panels: int, optional
             This is the number of spanwise panels to be used between this cross
-            section and the next one. The default
-            value is 8.
+            section and the next one. The default value is 8.
         :param spanwise_spacing: str, optional
-            This is the Can be 'cosine' or 'uniform'. Highly recommended to be
-            cosine. The default value is
+            This is the Can be "cosine" or "uniform". It is highly recommended to use
+            cosine spanwise spacing as it generally produces more accurate results
+            than uniform spanwise spacing with the same number of panels. The default
+            value is "cosine".
         """
 
         # Initialize all the class attributes.
@@ -512,26 +534,22 @@ class Airfoil:
 
         :param name: str, optional
             This is the name of the airfoil. It should correspond to the name in the
-            airfoils directory unless you are
-            passing in your own coordinates. The default is "Untitled Airfoil".
+            airfoils directory unless you are passing in your own coordinates. The
+            default is "Untitled Airfoil".
         :param coordinates: array, optional
-            This is a N x 2 array of the airfoil's coordinates, where N is the
-            number of coordinates. Treat this
-            as an immutable, don't edit directly after initialization. If you wish to
-            load coordinates from the airfoil
+            This is a N x 2 array of the airfoil's coordinates, where N is the number
+            of coordinates. Treat this as an immutable, don't edit directly after
+            initialization. If you wish to load coordinates from the airfoil
             directory, leave this as None. The default is None. Make sure that any
-            airfoil coordinates used range in x
-            from 0 to 1.
+            airfoil coordinates used range in x from 0 to 1.
         :param repanel: bool, optional
             This is the variable that determines whether or not you would like to
-            repanel the airfoil coordinates. This
-            applies to coordinates passed in by the user or to the directory
-            coordinates. It is highly recommended to
-            set this to True. The default is True.
+            repanel the airfoil coordinates. This applies to coordinates passed in by
+            the user or to the directory coordinates. It is highly recommended to set
+            this to True. The default is True.
         :param n_points_per_side: int, optional
             This is number of points to use when repaneling the airfoil. It is
-            ignored if the repanel is False. The
-            default is 400.
+            ignored if the repanel is False. The default is 400.
         """
 
         # Initialize the airfoil name.
@@ -1072,8 +1090,7 @@ class Panel:
         self.is_trailing_edge = is_trailing_edge
 
         # Initialize variables to hold attributes that describe the panel's position
-        # in its wing's panel matrix. They
-        # will be populated by the meshing function.
+        # in its wing's panel matrix. They will be populated by the meshing function.
         self.is_right_edge = None
         self.is_left_edge = None
         self.local_chordwise_position = None
@@ -1269,7 +1286,6 @@ def cosspace(
         This sets whether or not the maximum value will be included in the output.
         The default is True.
     :return cosine_spaced_points: 1D array
-
         This is a 1D array of the points, ranging from the minimum to the maximum
         value (inclusive), spaced via a cosine function.
     """
@@ -1295,9 +1311,8 @@ def reflect_over_xz_plane(input_vector):
         Date of Retrieval:    04/28/2020
 
     :param input_vector: array
-        This can either be a 1D array of three items, a M x 3 2D array, or a M x
-        N x 3 3D array. N and
-        represent arbitrary numbers of rows or columns.
+        This can either be a 1D array of three items, a M x 3 2D array, or a M x N x
+        3 3D array. N and represent arbitrary numbers of rows or columns.
     :return output vector: array
         This is a array with each vertex's y variable flipped.
     """
@@ -1314,13 +1329,12 @@ def reflect_over_xz_plane(input_vector):
         output_vector = output_vector * np.array([1, -1, 1])
     elif len(shape) == 2 and shape[1] == 3:
         # The input vector is a 2D array of shape M x 3. Where M is some arbitrary
-        # number of rows. Flip each
-        # vertex's y variable.
+        # number of rows. Flip each vertex's y variable.
         output_vector = output_vector * np.array([1, -1, 1])
     elif len(shape) == 3 and shape[2] == 3:  # 3D MxNx3 vector
         # The input vector is a 3D array of shape M x N x 3. Where M is some
-        # arbitrary number of rows, and N is
-        # some arbitrary number of columns. Flip each vertex's y variable.
+        # arbitrary number of rows, and N is some arbitrary number of columns. Flip
+        # each vertex's y variable.
         output_vector = output_vector * np.array([1, -1, 1])
     else:
         # The input vector is an unacceptable shape. Throw an error.
@@ -1413,7 +1427,6 @@ def numba_centroid_of_quadrilateral(
         This is an array containing the x, y, and z components of the centroid of the
         quadrilateral.
     """
-
     x_average = (
         front_left_vertex[0]
         + front_right_vertex[0]
